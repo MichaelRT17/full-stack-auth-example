@@ -17,7 +17,7 @@ const {
 
 const app = express();
 
-massive(CONNECTION_STRING).then( db => {
+massive(CONNECTION_STRING).then(db => {
     app.set('db', db);
 })
 
@@ -36,19 +36,29 @@ passport.use(new Auth0Strategy({
     scope: 'openid profile'
 }, (accessToken, refreshToken, extraParams, profile, done) => {
     const db = app.get('db')
-    
+    let { id, displayName, picture } = profile;
+    db.find_user([id]).then(user => {
+        if (user[0]) {
+            done(null, user[0].id)
+        } else {
+            db.create_user([displayName, picture, id]).then((createdUser) => {
+                done(null, createdUser[0].id)
+            })
+        }
+    })
 }))
 
-passport.serializeUser((profile, done) => {
-    done(null, profile);
+passport.serializeUser((id, done) => {
+    done(null, id);
 })
-passport.deserializeUser((profile, done) => {
-    done(null, profile);
+passport.deserializeUser((id, done) => {
+    //sends the id to req.user
+    done(null, id);
 })
 
 app.get('/auth', passport.authenticate('auth0'));
 app.get('/auth/callback', passport.authenticate('auth0', {
-    successRedirect: 'http://localhost:3000'
+    successRedirect: 'http://localhost:3000/#/private'
 }))
 
 
