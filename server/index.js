@@ -48,18 +48,34 @@ passport.use(new Auth0Strategy({
     })
 }))
 
-passport.serializeUser((id, done) => {
-    done(null, id);
+passport.serializeUser((primaryKeyID, done) => {
+    done(null, primaryKeyID);
 })
-passport.deserializeUser((id, done) => {
-    //sends the id to req.user
-    done(null, id);
+passport.deserializeUser((primaryKeyID, done) => {
+    //sends the primaryKeyID to req.user
+    app.get('db').find_session_user([primaryKeyID]).then( user => {
+        done(null, user[0])
+    })
 })
 
 app.get('/auth', passport.authenticate('auth0'));
-app.get('/auth/callback', passport.authenticate('auth0', {
-    successRedirect: 'http://localhost:3000/#/private'
-}))
+app.get('/auth/callback',
+    passport.authenticate('auth0', {
+        successRedirect: 'http://localhost:3000/#/private'
+    })
+);
+app.get('/auth/logout', (req, res) => {
+    req.logOut();
+    res.redirect('http://localhost:3000')
+})
+app.get('/auth/user', (req, res) => {
+    if (req.user) {
+        res.status(200).send(req.user)
+    } else {
+        res.status(401).send('Access Denied')
+    }
+})
+
 
 
 app.listen(SERVER_PORT, () => {
